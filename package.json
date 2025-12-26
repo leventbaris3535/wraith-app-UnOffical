@@ -1,13 +1,15 @@
 {
   "name": "wraith-app",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Unofficial custom wraith app",
   "author": "leventbaris3535",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win",
+    "build:installer": "electron-builder --win nsis",
+    "build:portable": "electron-builder --win portable"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -25,13 +27,18 @@
       "!node_modules/{.cache,.bin,electron*}/**/*",
       "!**/*.{md,markdown,yml,yaml}"
     ],
+    "extraResources": [
+      "python/dist/winctl.exe",
+      "lang/*",
+      "tray-icon.png"
+    ],
     "asar": false,
     "directories": {
       "output": "dist",
       "buildResources": "build"
     },
     "win": {
-      "target": "nsis",
+      "target": ["nsis", "portable"],
       "icon": "build/icon.ico",
       "forceCodeSigning": false
     },

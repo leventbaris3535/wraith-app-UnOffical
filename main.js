@@ -7,7 +7,27 @@ const { execFile } = require('child_process');
 
 const START_URL = 'https://wraith.software/';
 const HTTP_PORT = 3000;
-const WINCTL_PATH = path.join(__dirname, 'python', 'dist', 'winctl.exe');
+
+// ==================== PORTABLE DOSYA YOLU YÖNETİMİ ====================
+// Paketlenmiş mi kontrol et
+const isPackaged = app.isPackaged;
+let resourcePath;
+
+if (isPackaged) {
+    // Paketlenmiş durumda, kaynaklar resourcesPath'te
+    resourcePath = process.resourcesPath;
+} else {
+    // Geliştirme durumunda, __dirname kullan
+    resourcePath = __dirname;
+}
+
+// WINCTL_PATH'i belirle
+let WINCTL_PATH = path.join(resourcePath, 'python', 'dist', 'winctl.exe');
+// winctl.exe kontrolü - yoksa uygulama çalışmaya devam etsin
+let winctlAvailable = fs.existsSync(WINCTL_PATH);
+
+// Dil dosyalarının yolu
+const langDir = path.join(resourcePath, 'lang');
 
 // ==================== single open ====================
 
@@ -32,7 +52,7 @@ app.on('second-instance', () => {
 // ==================== LANGUAGE MANAGER ====================
 class LanguageManager {
     constructor() {
-        this.langDir = path.join(__dirname, 'lang');
+        this.langDir = langDir;
         this.config = this.loadConfig();
         this.currentLanguage = this.config.selectedLanguage || this.config.defaultLanguage;
         this.translations = this.loadLanguage(this.currentLanguage);
@@ -199,12 +219,18 @@ function getChromiumPid() {
 }
 
 function hideChromiumWindow() {
+    // winctl.exe yoksa gizleme yapma
+    if (!winctlAvailable) return;
+    
     const pid = getChromiumPid();
     if (!pid) return;
     execFile(WINCTL_PATH, ['hide', String(pid)], { windowsHide: true }, () => {});
 }
 
 function showChromiumWindow() {
+    // winctl.exe yoksa gösterme yapma
+    if (!winctlAvailable) return;
+    
     const pid = getChromiumPid();
     if (!pid) return;
     execFile(WINCTL_PATH, ['show', String(pid)], { windowsHide: true }, () => {});
@@ -256,7 +282,8 @@ async function shutdownAndExit(code = 0) {
 }
 
 async function startBrowser() {
-    const userDataPath = path.join(__dirname, 'chromium-profile');
+    // Chromium profil dizinini userData içine al (tüm PC'lerde çalışması için)
+    const userDataPath = path.join(app.getPath('userData'), 'chromium-profile');
     const launchArgs = [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -309,7 +336,7 @@ async function runClickById(id) {
 }
 
 function buildTray() {
-    let iconPath = path.join(__dirname, 'tray-icon.png');
+    let iconPath = path.join(resourcePath, 'tray-icon.png');
     let image = null;
     try {
         image = nativeImage.createFromPath(iconPath);
@@ -619,6 +646,7 @@ function changeLanguage(langCode) {
     }
     return false;
 }
+
 // ==================== START APPLICATION ====================
 app.on('ready', async () => {
     try {
@@ -628,5 +656,3 @@ app.on('ready', async () => {
         shutdownAndExit(1);
     }
 });
-
-app.on('window-all-closed', () => {});

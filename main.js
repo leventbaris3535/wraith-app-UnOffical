@@ -296,8 +296,13 @@ async function startBrowser() {
 
     if (forceKiosk) launchArgs.push('--kiosk');
 
+    const chromePath = app.isPackaged
+      ? path.join(process.resourcesPath, 'chromium', 'chrome.exe')
+      : undefined;
+
     browser = await puppeteer.launch({
         headless: false,
+        executablePath: chromePath,
         userDataDir: userDataPath,
         args: launchArgs,
         defaultViewport: null
@@ -656,3 +661,6 @@ app.on('ready', async () => {
         shutdownAndExit(1);
     }
 });
+
+// NOT: Kapanma sorununu düzeltmek için bu satırı silin veya yoruma alın
+// app.on('window-all-closed', () => {});
